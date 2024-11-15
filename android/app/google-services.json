@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "852029103276",
+    "project_id": "mynotes-16019",
+    "storage_bucket": "mynotes-16019.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:852029103276:android:63003645944ad4d37d5309",
+        "android_client_info": {
+          "package_name": "com.heril.mynotes"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "852029103276-pmltav8akiu2cvd1sh2eipqiqv6aa0uj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.heril.mynotes",
+            "certificate_hash": "0293c48340071ba61b65b4cdb3d10749c12d8e25"
+          }
+        },
+        {
+          "client_id": "852029103276-6f4dtnjho0il3o0e4f89eahnmrkkn5qf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2UN55e1UF0Uk7SAgu3VWBJRu892WuWPw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "852029103276-6f4dtnjho0il3o0e4f89eahnmrkkn5qf.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "852029103276-1cub6rc1fpthlhf7437sb6uppoisnvv3.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.heril.mynotes"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
