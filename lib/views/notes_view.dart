@@ -1,12 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:developer' as devtools show log;
 
 import 'package:mynotes/constants/routes.dart';
+import 'package:mynotes/services/auth/auth_service.dart';
+import 'package:mynotes/services/crud/notes_service.dart';
 
-enum MenuAction {
-  logout,
-}
+import '../enums/menu_action.dart';
 
 class NotesView extends StatefulWidget {
   const NotesView({super.key});
@@ -16,6 +15,22 @@ class NotesView extends StatefulWidget {
 }
 
 class _NotesViewState extends State<NotesView> {
+  late final NotesService _notesService;
+  String get userEmail => AuthService.firebase().currentUser!.email!;
+
+  @override
+  void initState() {
+    super.initState();
+    _notesService=NotesService();
+    _notesService.open();
+  }
+
+  @override
+  void dispose() {
+    _notesService.close();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -24,17 +39,20 @@ class _NotesViewState extends State<NotesView> {
         backgroundColor: Colors.blue,
         actions: [
           PopupMenuButton<MenuAction>(
-            onSelected: (value) async{
-              switch(value){
+            onSelected: (value) async {
+              switch (value) {
                 case MenuAction.logout:
-                  final shouldLogout=await showLogOutDialog(context);
-                  if(shouldLogout){
+                  final shouldLogout = await showLogOutDialog(context);
+                  if (shouldLogout) {
                     try {
-                      await FirebaseAuth.instance.signOut();
-                    }  catch (e) {
+                      await AuthService.firebase().logOut();
+                    } catch (e) {
                       devtools.log(e.toString());
                     }
-                    Navigator.of(context).pushNamedAndRemoveUntil(loginRoute, (route) => false,);
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                      loginRoute,
+                      (route) => false,
+                    );
                   }
                   break;
               }

@@ -1,9 +1,11 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:mynotes/constants/routes.dart';
 import 'package:mynotes/firebase_options.dart';
+import 'package:mynotes/services/auth/auth_exceptions.dart';
+import 'package:mynotes/services/auth/auth_service.dart';
+import 'package:mynotes/services/auth/firebase_auth_provider.dart';
+import 'package:mynotes/widgets/toast.dart';
 
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
@@ -30,23 +32,6 @@ class _RegisterViewState extends State<RegisterView> {
     super.dispose();
   }
 
-  Future<UserCredential> signInWithGoogle() async {
-    // Trigger the Google authentication flow
-    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-
-    // Obtain the auth details from the request
-    final GoogleSignInAuthentication? googleAuth = await googleUser?.authentication;
-
-    // Create a new credential
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth?.accessToken,
-      idToken: googleAuth?.idToken,
-    );
-
-    // Sign in to Firebase with the Google [UserCredential]
-    return await FirebaseAuth.instance.signInWithCredential(credential);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -55,9 +40,7 @@ class _RegisterViewState extends State<RegisterView> {
         backgroundColor: Colors.blue,
       ),
       body: FutureBuilder(
-        future: Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        ),
+        future: AuthService.firebase().initialize(),
         builder: (context, snapshot) {
           switch (snapshot.connectionState) {
             case ConnectionState.done:
@@ -81,12 +64,18 @@ class _RegisterViewState extends State<RegisterView> {
                       final email = _email.text;
                       final password = _password.text;
                       try {
-                        final userCredential = await FirebaseAuth.instance
-                            .createUserWithEmailAndPassword(
-                            email: email, password: password);
-                        print(userCredential);
-                      } on FirebaseAuthException catch (e) {
-                        print(e.code);
+                        await AuthService.firebase().createUser(email: email, password: password);
+                        await AuthService.firebase().sendEmailVerification();
+                        Navigator.of(context).pushNamed(verifyRoute);
+                      } on EmailAlreadyInUseAuthException catch (_) {
+                        showErrorToast('Email already in use.');
+                      } on InvalidEmailAuthException catch(_){
+                        showErrorToast('Invalid email.');
+                      } on WeakPasswordAuthException catch(_){
+                        showErrorToast('Weak password.');
+                      }
+                      catch(_){
+                        showErrorToast('An unknown error occurred. Please try again.');
                       }
                     },
                     child: const Text('Register',selectionColor: Colors.blue,),
@@ -94,10 +83,14 @@ class _RegisterViewState extends State<RegisterView> {
                   ElevatedButton(
                     onPressed: () async {
                       try {
-                        final userCredential = await signInWithGoogle();
-                        print('Signed in with Google: $userCredential');
+                        await AuthService.firebase().logInWithGoogle();
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          notesRoute,
+                              (route) => false,
+                        );
                       } catch (e) {
-                        print('Error during Google Sign-In: $e');
+                        print(e);
                       }
                     },
                     child: const Text('Sign in with Google'),

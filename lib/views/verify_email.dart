@@ -1,8 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'dart:developer' as devtools show log;
 
 import 'package:mynotes/constants/routes.dart';
+import 'package:mynotes/services/auth/auth_service.dart';
+import 'package:mynotes/widgets/toast.dart';
 
 class VerifyEmailView extends StatefulWidget {
   const VerifyEmailView({super.key});
@@ -17,21 +18,34 @@ class _VerifyEmailViewState extends State<VerifyEmailView> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Verify Email'),
+        backgroundColor: Colors.blue,
       ),
       body: Column(
         children: [
-          const Text('Please verify your email address'),
+          const Text('An email has been sent for verification. Please open it to verify'),
+          const Text("If you didn't got the email press the button below."),
           TextButton(
               onPressed: () async {
-                final user = FirebaseAuth.instance.currentUser;
-                await user?.sendEmailVerification();
+                final user = AuthService.firebase().currentUser;
                 try {
-                  await FirebaseAuth.instance.signOut();
+                  await AuthService.firebase().sendEmailVerification();
+                  await AuthService.firebase().logOut();
+                  Navigator.of(context).pushNamedAndRemoveUntil(loginRoute, (route) => false,);
                 }  catch (e) {
                   devtools.log(e.toString());
+                  showErrorToast(e.toString());
                 }
                 Navigator.of(context).pushNamedAndRemoveUntil(loginRoute, (route) => false,);
-              }, child: const Text('Send email verification')),
+              },
+              child: const Text('Send email verification')),
+          TextButton(
+              onPressed: () {
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  registerRoute,
+                      (route) => false,
+                );
+              },
+              child: const Text('Register Page'))
         ],
       ),
     );

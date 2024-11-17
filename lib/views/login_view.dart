@@ -1,9 +1,12 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:mynotes/constants/routes.dart';
 import 'package:mynotes/firebase_options.dart';
+import 'package:mynotes/services/auth/auth_exceptions.dart';
+import 'package:mynotes/services/auth/auth_service.dart';
+
+import '../widgets/toast.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -30,24 +33,6 @@ class _LoginViewState extends State<LoginView> {
     super.dispose();
   }
 
-  Future<UserCredential> signInWithGoogle() async {
-    // Trigger the Google authentication flow
-    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-
-    // Obtain the auth details from the request
-    final GoogleSignInAuthentication? googleAuth =
-        await googleUser?.authentication;
-
-    // Create a new credential
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth?.accessToken,
-      idToken: googleAuth?.idToken,
-    );
-
-    // Sign in to Firebase with the Google [UserCredential]
-    return await FirebaseAuth.instance.signInWithCredential(credential);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,9 +41,7 @@ class _LoginViewState extends State<LoginView> {
         backgroundColor: Colors.blue,
       ),
       body: FutureBuilder(
-        future: Firebase.initializeApp(
-          options: DefaultFirebaseOptions.currentPlatform,
-        ),
+        future: AuthService.firebase().initialize(),
         builder: (context, snapshot) {
           switch (snapshot.connectionState) {
             case ConnectionState.done:
@@ -73,7 +56,7 @@ class _LoginViewState extends State<LoginView> {
                   TextField(
                     controller: _password,
                     decoration:
-                        const InputDecoration(hintText: 'Enter Password'),
+                    const InputDecoration(hintText: 'Enter Password'),
                     obscureText: true,
                     enableSuggestions: false,
                     autocorrect: false,
@@ -82,10 +65,33 @@ class _LoginViewState extends State<LoginView> {
                     onPressed: () async {
                       final email = _email.text;
                       final password = _password.text;
-                      final userCredential = await FirebaseAuth.instance
-                          .signInWithEmailAndPassword(
-                              email: email, password: password);
-                      print(userCredential);
+                      try {
+                        await AuthService.firebase().logIn(email: email, password: password);
+                        final user=AuthService.firebase().currentUser;
+                        if(user!=null) {
+                          if (user.isEmailVerified) {
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              notesRoute,
+                                  (route) => false,
+                            );
+                          } else {
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              verifyRoute,
+                                  (route) => false,
+                            );
+                          }
+                        }
+                      } on UserNotFoundAuthException catch (_) {
+                        showErrorToast('No such user exists.');
+                      } on WrongPasswordAuthException catch(_){
+                        showErrorToast('Incorrect password');
+                      } on InvalidEmailAuthException catch(_){
+                        showErrorToast('Invalid email');
+                      } catch(_){
+                        showErrorToast('An unknown error occurred. Please try again.');
+                      }
                     },
                     child: const Text(
                       'Login',
@@ -94,12 +100,16 @@ class _LoginViewState extends State<LoginView> {
                   ),
                   ElevatedButton(
                     onPressed: () async {
-                      try {
-                        final userCredential = await signInWithGoogle();
-                        print('Signed in with Google: $userCredential');
-                      } catch (e) {
-                        print('Error during Google Sign-In: $e');
-                      }
+                        try {
+                          await AuthService.firebase().logInWithGoogle();
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            notesRoute,
+                                (route) => false,
+                          );
+                        } catch (e) {
+                          print(e);
+                        }
                     },
                     child: const Text('Sign in with Google'),
                   ),
@@ -107,7 +117,7 @@ class _LoginViewState extends State<LoginView> {
                       onPressed: () {
                         Navigator.of(context).pushNamedAndRemoveUntil(
                           registerRoute,
-                          (route) => false,
+                              (route) => false,
                         );
                       },
                       child: const Text('Not registered yet? Register here!'))
@@ -121,3 +131,11 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 }
+
+// Future<void> showErrorDialog(BuildContext context, String text) {
+//   return showDialog(context: context, builder: (context) {
+//     AlertDialog(
+//       title: const Text('An error occured'),
+//     );
+//   },)
+// }
