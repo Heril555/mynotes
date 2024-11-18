@@ -76,6 +76,7 @@ class _LoginViewState extends State<LoginView> {
                                   (route) => false,
                             );
                           } else {
+                            await AuthService.firebase().sendEmailVerification();
                             Navigator.pushNamedAndRemoveUntil(
                               context,
                               verifyRoute,

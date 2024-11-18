@@ -11,7 +11,20 @@ class NotesService {
 
   List<DatabaseNote> _notes = [];
 
-  final _notesStreamController = StreamController<List<DatabaseNote>>.broadcast();
+  // making NotesService a singleton
+  static final NotesService _shared = NotesService._sharedInstance();
+  NotesService._sharedInstance() {
+    _notesStreamController = StreamController<List<DatabaseNote>>.broadcast(
+      onListen: () {
+        _notesStreamController.sink.add(_notes);
+      },
+    );
+  }
+  factory NotesService() => _shared;
+
+  late final StreamController<List<DatabaseNote>> _notesStreamController;
+
+  Stream<List<DatabaseNote>> get allNotes => _notesStreamController.stream;
 
   Future<void> _cacheNotes() async {
     final allNotes = await getAllNotes();
@@ -136,7 +149,7 @@ class NotesService {
     } on CouldNotFindUser {
       final createdUser = await createUser(email: email);
       return createdUser;
-    } catch(e){
+    } catch (e) {
       rethrow;
     }
   }
@@ -151,10 +164,10 @@ class NotesService {
     );
     if (deletedCount != 1) {
       throw CouldNotDeleteNote();
-    }else{
+    } else {
       final countBefore = _notes.length;
-      _notes.removeWhere((note) => note.id==id);
-      if(_notes.length<countBefore){
+      _notes.removeWhere((note) => note.id == id);
+      if (_notes.length < countBefore) {
         _notesStreamController.add(_notes);
       }
     }
@@ -164,7 +177,7 @@ class NotesService {
     await open();
     final db = _getDatabaseOrThrow();
     final deletedCount = await db.delete(noteTable);
-    _notes=[];
+    _notes = [];
     _notesStreamController.add(_notes);
     return deletedCount;
   }
@@ -182,7 +195,7 @@ class NotesService {
       throw CouldNotFindNote();
     }
     final note = DatabaseNote.fromRow(result.first);
-    _notes.removeWhere((note) => note.id==id);
+    _notes.removeWhere((note) => note.id == id);
     _notes.add(note);
     _notesStreamController.add(_notes);
     return note;
@@ -193,29 +206,35 @@ class NotesService {
     final db = _getDatabaseOrThrow();
     final result = await db.query(noteTable);
     final List<DatabaseNote> notes = [];
-    for(var map in result){
+    for (var map in result) {
       notes.add(DatabaseNote.fromRow(map));
     }
     return notes;
   }
 
-  Future<DatabaseNote> updateNote({required DatabaseNote note, required String text,}) async {
-
+  Future<DatabaseNote> updateNote({
+    required DatabaseNote note,
+    required String text,
+  }) async {
     final db = _getDatabaseOrThrow();
 
     // make sure note exists
     await getNote(id: note.id);
 
     // update DB
-    final updatedCount = await db.update(noteTable, {
-      textColumn: text,
-      isSyncedWithCloudColumn: 0,
-    });
-    if(updatedCount!=1){
-      throw CouldNotUpdateNote();
+    final updatedCount = await db.update(
+        noteTable,
+        {
+          textColumn: text,
+          isSyncedWithCloudColumn: 0,
+        },
+        where: 'id=?',
+        whereArgs: [note.id]);
+    if (updatedCount != 1) {
+      // throw CouldNotUpdateNote();
     }
     final updatedNote = await getNote(id: note.id);
-    _notes.removeWhere((note) => note.id==updatedNote.id);
+    _notes.removeWhere((note) => note.id == updatedNote.id);
     _notes.add(updatedNote);
     _notesStreamController.add(_notes);
     return updatedNote;
@@ -246,7 +265,7 @@ class DatabaseUser {
 class DatabaseNote {
   final int id;
   final int userId;
-  final String text;
+  final String? text;
   final bool isSyncedWithCloud;
 
   DatabaseNote(
@@ -258,7 +277,7 @@ class DatabaseNote {
   DatabaseNote.fromRow(Map<String, Object?> map)
       : id = map[idColumn] as int,
         userId = map[userIdColumn] as int,
-        text = map[emailColumn] as String,
+        text = map[emailColumn] as String?,
         isSyncedWithCloud =
             (map[isSyncedWithCloudColumn] as int) == 1 ? true : false;
 

@@ -5,7 +5,7 @@ import 'package:mynotes/constants/routes.dart';
 import 'package:mynotes/services/auth/auth_service.dart';
 import 'package:mynotes/services/crud/notes_service.dart';
 
-import '../enums/menu_action.dart';
+import '../../enums/menu_action.dart';
 
 class NotesView extends StatefulWidget {
   const NotesView({super.key});
@@ -25,11 +25,11 @@ class _NotesViewState extends State<NotesView> {
     _notesService.open();
   }
 
-  @override
-  void dispose() {
-    _notesService.close();
-    super.dispose();
-  }
+  // @override
+  // void dispose() {
+  //   _notesService.close();
+  //   super.dispose();
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +68,55 @@ class _NotesViewState extends State<NotesView> {
           )
         ],
       ),
-      body: const Text('Hello World! '),
+      body: FutureBuilder(
+          future: _notesService.getOrCreateUser(email: userEmail),
+          builder: (context, snapshot) {
+            switch(snapshot.connectionState){
+              case ConnectionState.done:
+                return StreamBuilder(stream: _notesService.allNotes, builder: (context, snapshot) {
+                  switch(snapshot.connectionState){
+                    case ConnectionState.waiting:
+                      return const Text('Waiting for all notes...');
+                    case ConnectionState.active:
+                      if(snapshot.hasData){
+                        final allNotes = snapshot.data as List<DatabaseNote>;
+                        print(allNotes);
+                        return ListView.builder(
+                          itemCount: allNotes.length,
+                          itemBuilder: (context, index) {
+                            final note = allNotes[index];
+                            return ListTile(
+                              title: Text(note.text??''),
+                            );
+                          },
+                        );
+                      }else{
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      }
+                    default:
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                  }
+                },);
+              default:
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+            }
+          },
+      ),
+      floatingActionButton: FloatingActionButton(onPressed: () async {
+        await Navigator.of(context).pushNamed(newNoteRoute);
+        setState(() {
+
+        });
+      },
+        shape: CircleBorder(),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 }
