@@ -216,10 +216,13 @@ class NotesService {
     required DatabaseNote note,
     required String text,
   }) async {
+    await open();
     final db = _getDatabaseOrThrow();
 
     // make sure note exists
     await getNote(id: note.id);
+
+    print('Updated text: $text');
 
     // update DB
     final updatedCount = await db.update(
@@ -230,8 +233,9 @@ class NotesService {
         },
         where: 'id=?',
         whereArgs: [note.id]);
-    if (updatedCount != 1) {
+    if (updatedCount == 0) {
       // throw CouldNotUpdateNote();
+      print('CouldNotUpdateNote');
     }
     final updatedNote = await getNote(id: note.id);
     _notes.removeWhere((note) => note.id == updatedNote.id);
@@ -277,7 +281,7 @@ class DatabaseNote {
   DatabaseNote.fromRow(Map<String, Object?> map)
       : id = map[idColumn] as int,
         userId = map[userIdColumn] as int,
-        text = map[emailColumn] as String?,
+        text = map[textColumn] as String?,
         isSyncedWithCloud =
             (map[isSyncedWithCloudColumn] as int) == 1 ? true : false;
 

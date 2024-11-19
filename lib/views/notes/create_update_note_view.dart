@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/services/auth/auth_service.dart';
+import 'package:mynotes/utilities/generics/get_arguments.dart';
 
 import '../../services/crud/notes_service.dart';
 
-class NewNoteView extends StatefulWidget {
-  const NewNoteView({super.key});
+class CreateUpdateNoteView extends StatefulWidget {
+  const CreateUpdateNoteView({super.key});
 
   @override
-  State<NewNoteView> createState() => _NewNoteViewState();
+  State<CreateUpdateNoteView> createState() => _CreateUpdateNoteViewState();
 }
 
-class _NewNoteViewState extends State<NewNoteView> {
+class _CreateUpdateNoteViewState extends State<CreateUpdateNoteView> {
   DatabaseNote? _note;
   late final NotesService _notesService;
   late final TextEditingController _textController;
@@ -32,7 +33,13 @@ class _NewNoteViewState extends State<NewNoteView> {
     _textController.addListener(_textControllerListener);
   }
 
-  Future<DatabaseNote> createNewNote() async{
+  Future<DatabaseNote> createOrGetExistingNote(BuildContext context) async{
+    final widgetNote = context.getArgument<DatabaseNote>();
+    if(widgetNote!=null){
+      _note=widgetNote;
+      _textController.text = widgetNote.text!;
+      return widgetNote;
+    }
     final existingNote = _note;
     if(existingNote!=null){
       return existingNote;
@@ -81,7 +88,7 @@ class _NewNoteViewState extends State<NewNoteView> {
         title: const Text('New Note'),
         backgroundColor: Colors.blue,
       ),
-      body: FutureBuilder(future: createNewNote(), builder: (context, snapshot) {
+      body: FutureBuilder(future: createOrGetExistingNote(context), builder: (context, snapshot) {
         switch(snapshot.connectionState){
           case ConnectionState.done:
             _note = snapshot.data as DatabaseNote;
@@ -93,19 +100,17 @@ class _NewNoteViewState extends State<NewNoteView> {
                   keyboardType: TextInputType.multiline,
                   maxLines: null,
                   onChanged: (value) {
-                    text=value;
-                    setState(() {
-
-                    });
+                    // setState(() {
+                    //   text=value;
+                    // });
                   },
-
                   decoration: const InputDecoration(
                     hintText: 'Start writing your note...'
                   ),
                 ),
-                Center(
-                  child: Text(text??""),
-                ),
+                // Center(
+                //   child: Text(text??""),
+                // ),
               ],
             );
           default:
