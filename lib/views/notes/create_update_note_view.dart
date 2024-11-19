@@ -45,9 +45,11 @@ class _CreateUpdateNoteViewState extends State<CreateUpdateNoteView> {
       return existingNote;
     }
     final currentUser = AuthService.firebase().currentUser!;
-    final email = currentUser.email!;
+    final email = currentUser.email;
     final owner = await _notesService.getUser(email: email);
-    return await _notesService.createNote(owner: owner);
+    final newNote = await _notesService.createNote(owner: owner);
+    _note=newNote;
+    return newNote;
   }
 
   void _deleteNoteIfTextIsEmpty(){
@@ -91,7 +93,6 @@ class _CreateUpdateNoteViewState extends State<CreateUpdateNoteView> {
       body: FutureBuilder(future: createOrGetExistingNote(context), builder: (context, snapshot) {
         switch(snapshot.connectionState){
           case ConnectionState.done:
-            _note = snapshot.data as DatabaseNote;
             _setupTextControllerListener();
             return Column(
               children: [

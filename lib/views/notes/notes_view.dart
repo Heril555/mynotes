@@ -86,6 +86,8 @@ class _NotesViewState extends State<NotesView> {
                         print(allNotes);
                         return NotesListView(notes: allNotes, onDeleteNote: (note) async {
                           await _notesService.deleteNote(id: note.id);
+                        }, onTap: (DatabaseNote note) async {
+                          await Navigator.of(context).pushNamed(createOrUpdateNoteRoute);
                         },);
                       }else{
                         return const Center(

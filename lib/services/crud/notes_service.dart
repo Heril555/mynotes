@@ -11,6 +11,8 @@ class NotesService {
 
   List<DatabaseNote> _notes = [];
 
+  DatabaseUser? user;
+
   // making NotesService a singleton
   static final NotesService _shared = NotesService._sharedInstance();
   NotesService._sharedInstance() {
@@ -145,6 +147,7 @@ class NotesService {
   Future<DatabaseUser> getOrCreateUser({required String email}) async {
     try {
       final user = await getUser(email: email);
+      this.user=user;
       return user;
     } on CouldNotFindUser {
       final createdUser = await createUser(email: email);
@@ -204,7 +207,13 @@ class NotesService {
   Future<List<DatabaseNote>> getAllNotes() async {
     await open();
     final db = _getDatabaseOrThrow();
-    final result = await db.query(noteTable);
+    final result = await db.rawQuery('''
+        SELECT ${noteTable}.*
+        FROM $noteTable
+        INNER JOIN $userTable
+        ON ${noteTable}.user_id = ${userTable}.id
+        WHERE ${userTable}.email = ?
+        ''', [user?.email]);
     final List<DatabaseNote> notes = [];
     for (var map in result) {
       notes.add(DatabaseNote.fromRow(map));
