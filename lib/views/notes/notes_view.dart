@@ -76,6 +76,7 @@ class _NotesViewState extends State<NotesView> {
           builder: (context, snapshot) {
             switch(snapshot.connectionState){
               case ConnectionState.done:
+                // print('Current user: ${_notesService._user}');
                 return StreamBuilder(stream: _notesService.allNotes, builder: (context, snapshot) {
                   switch(snapshot.connectionState){
                     case ConnectionState.waiting:
@@ -83,7 +84,7 @@ class _NotesViewState extends State<NotesView> {
                     case ConnectionState.active:
                       if(snapshot.hasData){
                         final allNotes = snapshot.data as List<DatabaseNote>;
-                        print(allNotes);
+                        print('all notes:$allNotes');
                         return NotesListView(notes: allNotes, onDeleteNote: (note) async {
                           await _notesService.deleteNote(id: note.id);
                         }, onTap: (DatabaseNote note) async {
