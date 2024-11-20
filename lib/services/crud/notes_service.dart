@@ -11,7 +11,7 @@ class NotesService {
 
   List<DatabaseNote> _notes = [];
 
-  DatabaseUser? user;
+  DatabaseUser? _user;
 
   // making NotesService a singleton
   static final NotesService _shared = NotesService._sharedInstance();
@@ -29,7 +29,9 @@ class NotesService {
   Stream<List<DatabaseNote>> get allNotes => _notesStreamController.stream;
 
   Future<void> _cacheNotes() async {
+    print('Caching notes for user: ${_user?.email}');
     final allNotes = await getAllNotes();
+    print('Notes retrieved: $allNotes');
     _notes = allNotes.toList();
     _notesStreamController.add(_notes);
   }
@@ -56,7 +58,6 @@ class NotesService {
       await db.execute(createUserTable);
       // create note table
       await db.execute(createNoteTable);
-      await _cacheNotes();
     } on MissingPlatformDirectoryException {
       throw UnableToGetDocumentsDirectory();
     }
@@ -144,13 +145,21 @@ class NotesService {
     return note;
   }
 
-  Future<DatabaseUser> getOrCreateUser({required String email}) async {
+  Future<DatabaseUser> getOrCreateUser({required String email,bool setAsCurrentUser=true}) async {
     try {
       final user = await getUser(email: email);
-      this.user=user;
+      if(setAsCurrentUser) {
+        _user = user;
+        print('getOrCreateUser:${_user?.email??'Null'}');
+      }
+      await _cacheNotes();
       return user;
     } on CouldNotFindUser {
       final createdUser = await createUser(email: email);
+      if(setAsCurrentUser) {
+        _user = createdUser;
+      }
+      await _cacheNotes();
       return createdUser;
     } catch (e) {
       rethrow;
@@ -205,19 +214,21 @@ class NotesService {
   }
 
   Future<List<DatabaseNote>> getAllNotes() async {
-    await open();
+    // await open();
     final db = _getDatabaseOrThrow();
     final result = await db.rawQuery('''
-        SELECT ${noteTable}.*
+        SELECT $noteTable.*
         FROM $noteTable
         INNER JOIN $userTable
-        ON ${noteTable}.user_id = ${userTable}.id
-        WHERE ${userTable}.email = ?
-        ''', [user?.email]);
+        ON $noteTable.user_id = $userTable.id
+        WHERE $userTable.email = ?
+        ''', [_user?.email]);
+    // final result = await db.query(noteTable);
     final List<DatabaseNote> notes = [];
     for (var map in result) {
       notes.add(DatabaseNote.fromRow(map));
     }
+    print('Fetched notes: $notes for user: ${_user!.email}');
     return notes;
   }
 
