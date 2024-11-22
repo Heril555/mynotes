@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/services/auth/auth_service.dart';
+import 'package:mynotes/services/cloud/cloud_note.dart';
+import 'package:mynotes/services/cloud/firebase_cloud_storage.dart';
 import 'package:mynotes/utilities/generics/get_arguments.dart';
 
 import '../../services/crud/notes_service.dart';
@@ -12,8 +14,8 @@ class CreateUpdateNoteView extends StatefulWidget {
 }
 
 class _CreateUpdateNoteViewState extends State<CreateUpdateNoteView> {
-  DatabaseNote? _note;
-  late final NotesService _notesService;
+  CloudNote? _note;
+  late final FirebaseCloudStorage _firebaseCloudStorage;
   late final TextEditingController _textController;
 
   String? text;
@@ -25,7 +27,7 @@ class _CreateUpdateNoteViewState extends State<CreateUpdateNoteView> {
     }
     final text = _textController.text;
     print('text2 $text');
-    await _notesService.updateNote(note: note, text: text);
+    await _firebaseCloudStorage.updateNote(note: note.documentId, text: note.text);
   }
 
   void _setupTextControllerListener(){
