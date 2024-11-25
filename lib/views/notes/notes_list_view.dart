@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/services/crud/notes_service.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../../services/cloud/cloud_note.dart';
 import '../../utilities/dialogs/delete_dialog.dart';
 
-typedef NoteCallback = void Function(DatabaseNote note);
+typedef NoteCallback = void Function(CloudNote note);
 
 class NotesListView extends StatelessWidget {
-  final List<DatabaseNote> notes;
+  final List<CloudNote> notes;
   final NoteCallback onDeleteNote;
   final NoteCallback onTap;
 
@@ -25,12 +27,20 @@ class NotesListView extends StatelessWidget {
               softWrap: true,
               overflow: TextOverflow.ellipsis,
           ),
-          trailing: IconButton(onPressed: () async {
-            final shouldDelete = await showDeleteDialog(context);
-            if(shouldDelete){
-              onDeleteNote(note);
-            }
-          }, icon: Icon(Icons.delete)),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min, // Ensures the Row is only as wide as its content
+            children: [
+              IconButton(onPressed: () async {
+                Share.share(note.text);
+              }, icon: Icon(Icons.share)),
+              IconButton(onPressed: () async {
+                final shouldDelete = await showDeleteDialog(context);
+                if(shouldDelete){
+                  onDeleteNote(note);
+                }
+              }, icon: Icon(Icons.delete)),
+            ],
+          ),
           onTap: () {
             onTap(note);
           },

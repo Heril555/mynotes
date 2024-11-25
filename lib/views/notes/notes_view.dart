@@ -3,10 +3,12 @@ import 'dart:developer' as devtools show log;
 
 import 'package:mynotes/constants/routes.dart';
 import 'package:mynotes/services/auth/auth_service.dart';
+import 'package:mynotes/services/cloud/firebase_cloud_storage.dart';
 import 'package:mynotes/services/crud/notes_service.dart';
 import 'package:mynotes/views/notes/notes_list_view.dart';
 
 import '../../enums/menu_action.dart';
+import '../../services/cloud/cloud_note.dart';
 import '../../utilities/dialogs/generic_dialog.dart';
 import '../../utilities/dialogs/logout_dialog.dart';
 
@@ -18,14 +20,14 @@ class NotesView extends StatefulWidget {
 }
 
 class _NotesViewState extends State<NotesView> {
-  late final NotesService _notesService;
-  String get userEmail => AuthService.firebase().currentUser!.email!;
+  late final FirebaseCloudStorage _firebaseCloudStorage;
+  String get userId => AuthService.firebase().currentUser!.id;
 
   @override
   void initState() {
     super.initState();
-    _notesService=NotesService();
-    _notesService.open();
+    _firebaseCloudStorage=FirebaseCloudStorage();
+    // _firebaseCloudStorage.open();
   }
 
   // @override
@@ -71,43 +73,30 @@ class _NotesViewState extends State<NotesView> {
           )
         ],
       ),
-      body: FutureBuilder(
-          future: _notesService.getOrCreateUser(email: userEmail),
-          builder: (context, snapshot) {
-            switch(snapshot.connectionState){
-              case ConnectionState.done:
-                // print('Current user: ${_notesService._user}');
-                return StreamBuilder(stream: _notesService.allNotes, builder: (context, snapshot) {
-                  switch(snapshot.connectionState){
-                    case ConnectionState.waiting:
-                      return const Text('Waiting for all notes...');
-                    case ConnectionState.active:
-                      if(snapshot.hasData){
-                        final allNotes = snapshot.data as List<DatabaseNote>;
-                        print('all notes:$allNotes');
-                        return NotesListView(notes: allNotes, onDeleteNote: (note) async {
-                          await _notesService.deleteNote(id: note.id);
-                        }, onTap: (DatabaseNote note) async {
-                          await Navigator.of(context).pushNamed(createOrUpdateNoteRoute,arguments: note);
-                        },);
-                      }else{
-                        return const Center(
-                          child: CircularProgressIndicator(),
-                        );
-                      }
-                    default:
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                  }
-                },);
-              default:
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
+      body: StreamBuilder(stream: _firebaseCloudStorage.allNotes(ownerUserId: userId), builder: (context, snapshot) {
+        switch(snapshot.connectionState){
+          case ConnectionState.waiting:
+            return const Text('Waiting for all notes...');
+          case ConnectionState.active:
+            if(snapshot.hasData){
+              final allNotes = snapshot.data as List<CloudNote>;
+              print('all notes:$allNotes');
+              return NotesListView(notes: allNotes, onDeleteNote: (note) async {
+                await _firebaseCloudStorage.deleteNote(documentId: note.documentId);
+              }, onTap: (CloudNote note) async {
+                await Navigator.of(context).pushNamed(createOrUpdateNoteRoute,arguments: note);
+              },);
+            }else{
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
             }
-          },
-      ),
+          default:
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+        }
+      },),
       floatingActionButton: FloatingActionButton(onPressed: () async {
         await Navigator.of(context).pushNamed(createOrUpdateNoteRoute);
       },
