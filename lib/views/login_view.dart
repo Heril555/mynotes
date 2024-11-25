@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:mynotes/constants/routes.dart';
 import 'package:mynotes/firebase_options.dart';
 import 'package:mynotes/services/auth/auth_exceptions.dart';
 import 'package:mynotes/services/auth/auth_service.dart';
+import 'package:mynotes/services/auth/bloc/auth_bloc.dart';
+import 'package:mynotes/services/auth/bloc/auth_event.dart';
 
 import '../widgets/toast.dart';
 
@@ -66,24 +69,7 @@ class _LoginViewState extends State<LoginView> {
                       final email = _email.text;
                       final password = _password.text;
                       try {
-                        await AuthService.firebase().logIn(email: email, password: password);
-                        final user=AuthService.firebase().currentUser;
-                        if(user!=null) {
-                          if (user.isEmailVerified) {
-                            Navigator.pushNamedAndRemoveUntil(
-                              context,
-                              notesRoute,
-                                  (route) => false,
-                            );
-                          } else {
-                            await AuthService.firebase().sendEmailVerification();
-                            Navigator.pushNamedAndRemoveUntil(
-                              context,
-                              verifyRoute,
-                                  (route) => false,
-                            );
-                          }
-                        }
+                        context.read()<AuthBloc>().add(AuthEventLogIn(email, password));
                       } on UserNotFoundAuthException catch (_) {
                         showErrorToast('No such user exists.');
                       } on WrongPasswordAuthException catch(_){
