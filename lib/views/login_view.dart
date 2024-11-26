@@ -8,7 +8,9 @@ import 'package:mynotes/services/auth/auth_exceptions.dart';
 import 'package:mynotes/services/auth/auth_service.dart';
 import 'package:mynotes/services/auth/bloc/auth_bloc.dart';
 import 'package:mynotes/services/auth/bloc/auth_event.dart';
+import 'package:mynotes/utilities/dialogs/loading_dialog.dart';
 
+import '../services/auth/bloc/auth_state.dart';
 import '../widgets/toast.dart';
 
 class LoginView extends StatefulWidget {
@@ -21,6 +23,7 @@ class LoginView extends StatefulWidget {
 class _LoginViewState extends State<LoginView> {
   late final TextEditingController _email;
   late final TextEditingController _password;
+  CloseDialog? _closeDialogHandle;
 
   @override
   void initState() {
@@ -38,82 +41,102 @@ class _LoginViewState extends State<LoginView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login'),
-        backgroundColor: Colors.blue,
-      ),
-      body: FutureBuilder(
-        future: AuthService.firebase().initialize(),
-        builder: (context, snapshot) {
-          switch (snapshot.connectionState) {
-            case ConnectionState.done:
-              return Column(
-                children: [
-                  TextField(
-                    controller: _email,
-                    decoration: const InputDecoration(hintText: 'Enter Email'),
-                    keyboardType: TextInputType.emailAddress,
-                    autocorrect: false,
-                  ),
-                  TextField(
-                    controller: _password,
-                    decoration:
-                    const InputDecoration(hintText: 'Enter Password'),
-                    obscureText: true,
-                    enableSuggestions: false,
-                    autocorrect: false,
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      final email = _email.text;
-                      final password = _password.text;
-                      try {
-                        context.read()<AuthBloc>().add(AuthEventLogIn(email, password));
-                      } on UserNotFoundAuthException catch (_) {
-                        showErrorToast('No such user exists.');
-                      } on WrongPasswordAuthException catch(_){
-                        showErrorToast('Incorrect password');
-                      } on InvalidEmailAuthException catch(_){
-                        showErrorToast('Invalid email');
-                      } catch(_){
-                        showErrorToast('An unknown error occurred. Please try again.');
-                      }
-                    },
-                    child: const Text(
-                      'Login',
-                      selectionColor: Colors.blue,
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthStateLoggedOut) {
+          // final closeDialog = _closeDialogHandle;
+          //
+          // if (!state.isLoading && closeDialog != null) {
+          //   closeDialog();
+          //   _closeDialogHandle = null;
+          // } else if (state.isLoading && closeDialog == null) {
+          //   _closeDialogHandle = showLoadingDialog(
+          //     context: context,
+          //     text: 'Loading...',
+          //   );
+          // }
+          if (state.exception is UserNotFoundAuthException) {
+            showErrorToast('No such user exists.');
+          } else if (state.exception is WrongPasswordAuthException) {
+            showErrorToast('Incorrect password');
+          } else if (state.exception is InvalidEmailAuthException) {
+            showErrorToast('Invalid email');
+          } else if (state.exception is GenericAuthException) {
+            showErrorToast('An unknown error occurred. Please try again.');
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Login'),
+          backgroundColor: Colors.blue,
+        ),
+        body: FutureBuilder(
+          future: AuthService.firebase().initialize(),
+          builder: (context, snapshot) {
+            switch (snapshot.connectionState) {
+              case ConnectionState.done:
+                return Column(
+                  children: [
+                    TextField(
+                      controller: _email,
+                      decoration:
+                          const InputDecoration(hintText: 'Enter Email'),
+                      keyboardType: TextInputType.emailAddress,
+                      autocorrect: false,
                     ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                        try {
-                          await AuthService.firebase().logInWithGoogle();
-                          Navigator.pushNamedAndRemoveUntil(
-                            context,
-                            notesRoute,
-                                (route) => false,
-                          );
-                        } catch (e) {
-                          print(e);
-                        }
-                    },
-                    child: const Text('Sign in with Google'),
-                  ),
-                  TextButton(
+                    TextField(
+                      controller: _password,
+                      decoration:
+                          const InputDecoration(hintText: 'Enter Password'),
+                      obscureText: true,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                    ),
+                    TextButton(
+                      onPressed: () async {
+                        final email = _email.text;
+                        final password = _password.text;
+                        context.read<AuthBloc>().add(AuthEventLogIn(
+                              email,
+                              password,
+                            ));
+                      },
+                      child: const Text(
+                        'Login',
+                        selectionColor: Colors.blue,
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        context.read<AuthBloc>().add(const AuthEventLogInWithGoogle());
+                      },
+                      child: const Text('Sign in with Google'),
+                    ),
+                    TextButton(
                       onPressed: () {
-                        Navigator.of(context).pushNamedAndRemoveUntil(
-                          registerRoute,
-                              (route) => false,
+                        context.read<AuthBloc>().add(
+                          const AuthEventForgotPassword(),
                         );
                       },
-                      child: const Text('Not registered yet? Register here!'))
-                ],
-              );
-            default:
-              return const Text('Loading...');
-          }
-        },
+                      child: Text(
+                        'Forgot Password? Reset here!',
+                      ),
+                    ),
+                    TextButton(
+                        onPressed: () {
+                          context.read<AuthBloc>().add(
+                                const AuthEventShouldRegister(),
+                              );
+                        },
+                        child: const Text('Not registered yet? Register here!'))
+                  ],
+                );
+              default:
+                return const Text('Loading...');
+            }
+          },
+        ),
       ),
     );
   }
